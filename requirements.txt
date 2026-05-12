@@ -1,0 +1,35 @@
+# MASSIVE TC v2 — Python 의존성
+#
+# 설치:
+#   pip install -r requirements.txt
+#
+# 별도 필요 (Python 패키지 외):
+#   - Ollama 서버 (https://ollama.com — 모델 추론용)
+#   - 모델: ollama pull gemma2:27b  (또는 gpt-oss:20b 등)
+
+# 대시보드 및 LLM 인터페이스 
+streamlit>=1.30.0
+openai>=1.10.0
+
+# Ollama Python client (로컬 LLM 호출)
+ollama>=0.1.6
+
+# HuggingFace datasets (AmazonScience/massive 로드)
+# 주의: datasets 3.x는 script-based 로딩 deprecated 함.
+# AmazonScience/massive 가 script 기반이라 2.x 필요.
+datasets>=2.14.0,<3.0.0
+
+# 데이터 처리 + xlsx 입출력
+pandas>=2.0.0
+openpyxl>=3.1.0
+numpy
+
+# Stage 2: LaBSE 임베딩 + parquet 입출력
+sentence-transformers>=2.2.0
+torch>=2.0.0
+pyarrow>=10.0.0
+
+# 차원 축소 및 시각화용
+umap-learn
+plotly
+scikit-learn

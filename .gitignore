@@ -1,0 +1,35 @@
+# ─── Python ────────────────────────────────────────────────────────
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.env
+
+# ─── 산출물 (생성되는 파일 — 실행 후 로컬에 생성됨) ────────────────
+# output/v1~v3  : Stage 1 개별 TC JSON (2,794+ files)
+output/v1/
+output/v2/
+output/v3/
+
+# output/patterns : extract_patterns.py 산출물 (내부 데이터 기반, 비공개)
+output/patterns/
+output/patterns/PATTERN_LIBRARY.md
+
+# output/labse : labse_similarity.py / make_llm_pairs*.py 산출물
+output/labse/
+
+# output/ 중간·임시 xlsx
+output/errors_v1_gemma2_27b.json
+output/MASSIVE_v2_v1_gemma2_27b.xlsx
+output/MASSIVE_v2_v2_gemma2_27b.xlsx
+output/MASSIVE_v2_v3_gemma2_27b.xlsx
+
+# ─── 구버전 파일 ────────────────────────────────────────────────────
+llm_gray_pairs_dashboard_old.py
+
+# ─── OS / IDE ──────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/settings.json
+*.swp
