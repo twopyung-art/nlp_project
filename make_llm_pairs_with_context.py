@@ -40,18 +40,18 @@ def run_prep():
     print("[*] Gray Zone 필터링 및 다국어 결합 중...")
     gray_pairs = df_sim[(df_sim["similarity"] >= 0.70) & (df_sim["similarity"] < 0.95)].copy()
 
-    context_df = df_raw[['Original_ID', 'ko-KR', 'en-US']]
-    
+    context_df = df_raw[['Original_ID', 'ko-KR', 'en-US', 'Expected_Result']]
+
     # TC_A 결합
     enriched = gray_pairs.merge(context_df, left_on='a_id', right_on='Original_ID')
-    enriched = enriched.rename(columns={'ko-KR': 'a_ko', 'en-US': 'a_en'}).drop(columns=['Original_ID'])
-    
+    enriched = enriched.rename(columns={'ko-KR': 'a_ko', 'en-US': 'a_en', 'Expected_Result': 'a_expected'}).drop(columns=['Original_ID'])
+
     # TC_B 결합
     enriched = enriched.merge(context_df, left_on='b_id', right_on='Original_ID')
-    enriched = enriched.rename(columns={'ko-KR': 'b_ko', 'en-US': 'b_en'}).drop(columns=['Original_ID'])
+    enriched = enriched.rename(columns={'ko-KR': 'b_ko', 'en-US': 'b_en', 'Expected_Result': 'b_expected'}).drop(columns=['Original_ID'])
 
     out_path = base_path / "llm_gray_pairs_context.jsonl"
-    final_cols = ['intent', 'a_id', 'b_id', 'a_ko', 'a_en', 'b_ko', 'b_en', 'similarity']
+    final_cols = ['intent', 'a_id', 'b_id', 'a_ko', 'a_en', 'a_expected', 'b_ko', 'b_en', 'b_expected', 'similarity']
     enriched[final_cols].to_json(out_path, orient="records", lines=True, force_ascii=False)
     
     print(f"[+] 완료: {len(enriched):,} 쌍 구성")
