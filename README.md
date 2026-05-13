@@ -149,6 +149,10 @@ SSH 터널 사용 시: `ssh -N -L 8501:localhost:8501 user@<서버>`
 | 2026-05-08 | `Human_Labeling_Target_500.xlsx` 생성 — 검증용 500쌍 선정 |
 | 2026-05-10 | Stage 3 대시보드 개발 시작 — 도메인별 정책, 배치 처리, 체크포인트 구현 |
 | 2026-05-12 | git 초기화 및 공동 작업 환경 구성 |
+| 2026-05-12 | Human Labeling v1 완료 (500쌍) — Cohen's Kappa 측정 기반 도메인 정책 v2 수립 |
+| 2026-05-13 | Stage 3 개선 — LLM 수행시간 표시, retry 로직, Kappa 이력 탭 분리(4탭 구조) |
+| 2026-05-13 | Stage 2.5 개선 — `Expected_Result` 컨텍스트 추가, jsonl 재생성 |
+| 2026-05-13 | Human Labeling v2 진행 중 — Expected_Result 반영 프롬프트 기반 Kappa 재측정 |
 
 ---
 
