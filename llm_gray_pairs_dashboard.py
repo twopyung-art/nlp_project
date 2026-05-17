@@ -21,22 +21,25 @@ INPUT_FILE = BASE_DIR / "output" / "labse" / "llm_gray_pairs_context.jsonl"
 HISTORY_FILE = BASE_DIR / "output" / "labse" / "kappa_history.json"
 
 # --- 3. 도메인 정책 사전 ---
-# Human labeling 500건 분석 기반 (2026-05-12 개정)
+# Human labeling 500건 분석 기반 (2026-05-15 v3 개정)
 # 주의: iot_hue 는 iot 보다 먼저 위치해야 매칭 우선순위가 올바름
 DEFAULT_DOMAIN_POLICIES = {
     # 주의: iot_hue 는 iot 보다 먼저 위치해야 매칭 우선순위가 올바름
     "weather": {
         "name": "날씨 도메인 (weather_query)",
         "guidelines": (
-            "UNIQUE: '내가 있는 곳/현재 위치' vs 특정 지역 지정\n"
+            "UNIQUE: 두 발화 모두 지역 명시, 서로 다른 지역 (서울 vs 경기도 용인)\n"
             "UNIQUE: 시간 범위 다름 (오늘 vs 내일 vs 주말 vs 이번 주)\n"
-            "UNIQUE: 날씨 항목 다름 (기온 vs 미세먼지 vs 강수)\n"
+            "UNIQUE: 날씨 항목 카테고리 다름 (기온 vs 미세먼지 vs 강수 -- 강수 내 비/눈 차이는 DUPLICATE)\n"
+            "DUPLICATE: 현재 위치 vs 위치 미지정 (내 지역 날씨 vs 날씨 어때 -- 같은 의도)\n"
             "DUPLICATE: 두 발화 모두 오늘 날씨 문의 -- 직접/간접 표현 무관 (오늘 우산 필요할까 vs 오늘 스웨터 입을까 -> 둘 다 오늘 날씨 의도)\n"
             "DUPLICATE: 두 발화 모두 특정 지역 날씨 조회 (같은 시간대)"
         ),
         "examples": (
-            "내가 있는 곳 날씨 vs 경기도 용인 날씨 -> unique (현재위치 vs 지정위치)\n"
+            "서울 날씨 vs 경기도 용인 날씨 -> unique (두 지역 모두 명시, 서로 다름)\n"
             "오늘 날씨 vs 내일 날씨 -> unique (날짜 다름)\n"
+            "내일 비가 올까 vs 내일 눈이 오나 -> duplicate (강수 카테고리 동일, 세부 유형만 다름)\n"
+            "이번 주 내 지역 날씨 vs 이번 주 날씨 -> duplicate (현재위치 vs 미지정 = 동일 의도)\n"
             "오늘 우산 필요할까 vs 오늘 스웨터 입을까 -> duplicate (둘 다 오늘 날씨 문의)\n"
             "오늘 밖에 추워 vs 오늘 날씨 어때 -> duplicate"
         )
@@ -44,15 +47,18 @@ DEFAULT_DOMAIN_POLICIES = {
     "iot_hue": {
         "name": "조명 도메인 (iot_hue_*)",
         "guidelines": (
-            "UNIQUE: 한쪽이라도 특정 공간을 명시하고 두 발화의 공간이 다름 (베란다 vs 공간없음, 침실 vs 거실)\n"
+            "UNIQUE: 두 발화 모두 방 이름(침실/거실/주방/베란다 등)을 명시하고 서로 다름\n"
+            "UNIQUE: 한 발화만 방 이름 명시, 다른 발화는 공간 미지정 (베란다 불 꺼 vs 조명 꺼)\n"
             "UNIQUE: 단일 동작 vs 다중 동작 결합\n"
             "DUPLICATE: 두 발화 모두 공간 지정 없이 같은 동작 (조명 꺼줘 vs 불 꺼줘)\n"
+            "DUPLICATE: '머리 위', '천장' 등 방향/위치 묘사는 방 이름 명시로 보지 않음 (공간 미지정으로 처리)\n"
             "DUPLICATE: lightchange에서 색상만 다름 (빨간 vs 분홍 -- 색상은 파라미터 변형)"
         ),
         "examples": (
-            "베란다 불 꺼줘 vs 조명 꺼줄래 -> unique (베란다 공간지정 vs 미지정)\n"
-            "침실 조명 꺼 vs 거실 조명 꺼 -> unique (두 공간 모두 명시, 서로 다름)\n"
+            "베란다 불 꺼줘 vs 조명 꺼줄래 -> unique (베란다 방 이름 명시 vs 미지정)\n"
+            "침실 조명 꺼 vs 거실 조명 꺼 -> unique (두 방 모두 명시, 서로 다름)\n"
             "조명 꺼줘 vs 불 꺼줘 -> duplicate (둘 다 공간 미지정)\n"
+            "조명 낮춰 vs 머리 위 조명 어둡게 해 -> duplicate (방향 묘사는 공간 미지정 처리)\n"
             "빨간 조명 해줘 vs 분홍색으로 바꿔줘 -> duplicate (색상 변형, 같은 lightchange)\n"
             "파란색으로 바꿔줘 vs 파란색 바꾸고 주방 꺼 -> unique (단일 vs 다중 의도)"
         )
@@ -333,7 +339,7 @@ def main():
             model_list = [m['name'] for m in models]
             default_idx = 0
             for i, m in enumerate(model_list):
-                if "llama3.1" in m:
+                if "exaone" in m:
                     default_idx = i
                     break
             selected_model = st.selectbox("사용할 모델 선택", model_list, index=default_idx)
@@ -344,9 +350,9 @@ def main():
         client = OpenAI(base_url=base_url, api_key="ollama")
 
         st.divider()
-        if st.button("도메인 정책 초기화 (v2 Human labeling 기반)"):
+        if st.button("도메인 정책 초기화 (v3 Human labeling 기반)"):
             st.session_state.domain_policies = DEFAULT_DOMAIN_POLICIES
-            st.session_state.policies_version = "v2"
+            st.session_state.policies_version = "v3"
             st.rerun()
         st.caption(f"현재 정책 버전: {st.session_state.get('policies_version', 'v1')}")
 

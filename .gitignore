@@ -6,6 +6,10 @@ __pycache__/
 *.egg-info/
 .env
 
+# ─── Azure 평가 산출물 ──────────────────────────────────────────────
+output/azure_eval_checkpoint.jsonl
+output/azure_eval_*.xlsx
+
 # ─── 산출물 (생성되는 파일 — 실행 후 로컬에 생성됨) ────────────────
 # output/v1~v3  : Stage 1 개별 TC JSON (2,794+ files)
 output/v1/

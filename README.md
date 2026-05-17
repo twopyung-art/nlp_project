@@ -24,9 +24,13 @@ LaBSE 임베딩 + 로컬 LLM으로 의미론적 중복 TC를 자동 검출하는
              make_llm_pairs_with_context.py
                     ↓
        output/labse/llm_gray_pairs_context.jsonl
+       (ko/en 발화 + Expected_Result 컨텍스트 포함)
                     ↓
-[Stage 3] 로컬 LLM 중복 판별 대시보드  (Streamlit)
-             llm_gray_pairs_dashboard.py
+[Stage 3] 로컬 LLM 중복 판별 대시보드  (Streamlit)      ┐
+             llm_gray_pairs_dashboard.py  (정책 v3)      │ 성능 비교
+                                                          │ kappa_history.json
+[Stage 4] 대형 모델 성능 평가  (Azure OpenAI)            │
+             eval_azure.py                               ┘
 ```
 
 ---
@@ -110,11 +114,12 @@ python labse_visualize.py
 ```bash
 python make_llm_pairs_with_context.py
 # 입력: output/labse/pair_similarity.parquet + MASSIVE_v2_v1_gemma2_27b_final.xlsx
-# 출력: output/labse/llm_gray_pairs_context.jsonl  (14,680 Gray 쌍, ko/en 컨텍스트 포함)
+# 출력: output/labse/llm_gray_pairs_context.jsonl  (14,680 Gray 쌍)
 ```
 
 - Gray 쌍(sim 0.70~0.95)만 추출 → LLM 판별 대상
-- 각 쌍에 ko-KR / en-US 발화 컨텍스트 추가
+- 각 쌍에 ko-KR / en-US 발화 + Expected_Result 컨텍스트 추가
+- Expected_Result는 언어별 응답 예시 이전까지만 truncation하여 저장
 
 ### Stage 3 — 중복 판별 대시보드
 
@@ -133,7 +138,29 @@ SSH 터널 사용 시: `ssh -N -L 8501:localhost:8501 user@<서버>`
 **대시보드 기능:**
 - `🧪 Test` 탭: 단건 LLM 판정 — 인덱스 선택 후 프롬프트 즉시 테스트
 - `📈 Batch` 탭: 건수 지정 → Ollama 배치 처리 → 체크포인트 자동 저장 → Excel 다운로드
-- 도메인별 판정 정책(weather / news / calendar / general) 자동 적용
+- `🎯 Kappa` 탭: Human Labeling 업로드 → LLM 판정과 비교 → Cohen's κ 산출
+- `📊 이력` 탭: 실험별 κ 비교 차트
+- 도메인별 판정 정책 v3 자동 적용 (weather / iot_hue / calendar / 기타)
+
+### Stage 4 — Azure OpenAI 성능 평가
+
+```bash
+# .env 파일 준비 (.env.example 참고)
+cp .env.example .env  # AZURE_OPENAI_ENDPOINT, KEY, DEPLOYMENT 입력
+
+# 100건 먼저 실행 (검증)
+python eval_azure.py --samples 100 --label "gpt4o-mini_v3"
+
+# 500건 전체 실행
+python eval_azure.py --samples 500 --label "gpt4o-mini_v3"
+
+# 중단 후 재시작
+python eval_azure.py --samples 500 --label "gpt4o-mini_v3" --resume
+```
+
+- `Human_Labeling_Target_500.xlsx` 기준으로 Azure 모델 성능(accuracy / Cohen's κ) 측정
+- 실행 결과는 `kappa_history.json`에 자동 저장 → 대시보드 이력 탭에서 로컬 모델과 비교 가능
+- 도메인별 오류율 및 오류 케이스 Excel 출력
 
 ---
 
@@ -153,6 +180,10 @@ SSH 터널 사용 시: `ssh -N -L 8501:localhost:8501 user@<서버>`
 | 2026-05-13 | Stage 3 개선 — LLM 수행시간 표시, retry 로직, Kappa 이력 탭 분리(4탭 구조) |
 | 2026-05-13 | Stage 2.5 개선 — `Expected_Result` 컨텍스트 추가, jsonl 재생성 |
 | 2026-05-13 | Human Labeling v2 진행 중 — Expected_Result 반영 프롬프트 기반 Kappa 재측정 |
+| 2026-05-15 | Stage 4 추가 — Azure OpenAI 성능 평가 스크립트 `eval_azure.py` 작성 |
+| 2026-05-15 | Azure gpt-4o-mini 500건 평가 완료 — κ=0.51 (Moderate), 모델별 성능 비교 기반 구축 |
+| 2026-05-15 | 도메인 정책 v3 개정 — weather(현재위치·강수세부유형), iot_hue(방향묘사 처리) 오류 수정 |
+| 2026-05-15 | Stage 2.5 개선 — Expected_Result truncation 적용, jsonl 재생성 예정 |
 
 ---
 
@@ -162,16 +193,19 @@ SSH 터널 사용 시: `ssh -N -L 8501:localhost:8501 user@<서버>`
 massive_datasets/
 ├── README.md
 ├── requirements.txt
+├── .env.example                    # Azure API 환경변수 템플릿
 ├── massive_tc_transfer_v2.py       # Stage 1: TC 생성 (Ollama)
 ├── labse_similarity.py             # Stage 2: LaBSE 유사도
 ├── labse_visualize.py              # Stage 2: 시각화
 ├── make_llm_pairs.py               # Stage 2.5: Gray 쌍 추출 (기본)
-├── make_llm_pairs_with_context.py  # Stage 2.5: ko/en 컨텍스트 포함
+├── make_llm_pairs_with_context.py  # Stage 2.5: ko/en + Expected_Result 컨텍스트
+├── llm_gray_pairs_dashboard.py     # Stage 3: 로컬 LLM 판별 대시보드 (정책 v3)
+├── eval_azure.py                   # Stage 4: Azure OpenAI 성능 평가 CLI
 ├── extract_patterns.py             # (참고) TC 패턴 분류 스크립트
 └── output/
     ├── MASSIVE_v2_v1_gemma2_27b_final.xlsx  ← git 포함
     └── Human_Labeling_Target_500.xlsx        ← git 포함
     # 아래는 git 제외 — 로컬 실행 후 생성됨
-    # ├── labse/     (Stage 2~3 산출물)
+    # ├── labse/     (Stage 2~3 산출물, kappa_history.json 포함)
     # └── v1~v3/     (Stage 1 TC JSON)
 ```

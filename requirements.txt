@@ -7,9 +7,10 @@
 #   - Ollama 서버 (https://ollama.com — 모델 추론용)
 #   - 모델: ollama pull gemma2:27b  (또는 gpt-oss:20b 등)
 
-# 대시보드 및 LLM 인터페이스 
+# 대시보드 및 LLM 인터페이스
 streamlit>=1.30.0
 openai>=1.10.0
+python-dotenv>=1.0.0
 
 # Ollama Python client (로컬 LLM 호출)
 ollama>=0.1.6

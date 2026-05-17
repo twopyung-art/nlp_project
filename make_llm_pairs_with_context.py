@@ -4,6 +4,15 @@ from pathlib import Path
 
 UTT_LINE_RE = re.compile(r"^\[(?P<lang>[a-z]{2}-[A-Z]{2})\]\s*(?P<utt>.+)$")
 
+def extract_short_expected(full_text: str) -> str:
+    """Expected_Result에서 언어별 응답 예시 이전까지만 추출 (LLM 프롬프트 길이 제한)"""
+    if not isinstance(full_text, str):
+        return "N/A"
+    cut = re.search(r"\[언어별 응답 예시\]|\*생성형", full_text)
+    if cut:
+        return full_text[: cut.start()].strip()
+    return full_text[:400].strip()
+
 def parse_procedure(procedure_text):
     if not isinstance(procedure_text, str):
         return None, None
@@ -40,7 +49,8 @@ def run_prep():
     print("[*] Gray Zone 필터링 및 다국어 결합 중...")
     gray_pairs = df_sim[(df_sim["similarity"] >= 0.70) & (df_sim["similarity"] < 0.95)].copy()
 
-    context_df = df_raw[['Original_ID', 'ko-KR', 'en-US', 'Expected_Result']]
+    context_df = df_raw[['Original_ID', 'ko-KR', 'en-US', 'Expected_Result']].copy()
+    context_df['Expected_Result'] = context_df['Expected_Result'].apply(extract_short_expected)
 
     # TC_A 결합
     enriched = gray_pairs.merge(context_df, left_on='a_id', right_on='Original_ID')
